@@ -1,0 +1,79 @@
+repeat task.wait() until game:IsLoaded()
+
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local TweenService = game:GetService("TweenService")
+local StarterGui = game:GetService("StarterGui")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+local chestFolder = workspace:FindFirstChild("ChestFolder")
+if not chestFolder then
+    error("Папка ChestFolder не найдена!")
+    return
+end
+
+-- Создаём красивый GUI-счётчик
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "ChestCounterGui"
+
+local counterLabel = Instance.new("TextLabel", screenGui)
+counterLabel.Size = UDim2.new(0, 200, 0, 50)
+counterLabel.Position = UDim2.new(1, -210, 1, -60)
+counterLabel.BackgroundTransparency = 0.3
+counterLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+counterLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+counterLabel.Font = Enum.Font.GothamBold
+counterLabel.TextSize = 22
+counterLabel.Text = "Собрано: 0"
+counterLabel.BorderSizePixel = 0
+counterLabel.TextStrokeTransparency = 0.5
+counterLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+counterLabel.ZIndex = 10
+
+local function findBasePart(object)
+    if object:IsA("BasePart") then
+        return object
+    elseif object:IsA("Model") then
+        return object:FindFirstChildWhichIsA("BasePart")
+    end
+    return nil
+end
+
+local function flyToChest(targetCFrame)
+    local tweenInfo = TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+    local goal = {CFrame = targetCFrame}
+    local tween = TweenService:Create(humanoidRootPart, tweenInfo, goal)
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+-- Счётчик сундуков
+local chestCounter = 0
+local skipped = 3
+local currentIndex = 0
+
+for _, chest in pairs(chestFolder:GetChildren()) do
+    if chest:IsA("Highlight") then continue end
+
+    currentIndex += 1
+    if currentIndex <= skipped then continue end
+
+    local basePart = findBasePart(chest)
+    if basePart then
+        local targetCFrame = basePart.CFrame * CFrame.new(0, 3, 0)
+        flyToChest(targetCFrame)
+
+        task.wait(0.2)
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, nil)
+        task.wait(0.1)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, nil)
+
+        chestCounter += 1
+        counterLabel.Text = "Собрано: " .. chestCounter
+    end
+end
+
+counterLabel.Text = "✅ Всего собрано: " .. chestCounter
+print("Сбор завершён. Пропущено: " .. skipped .. ", собрано: " .. chestCounter)
